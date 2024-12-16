@@ -1,0 +1,2 @@
+[workspace]
+members = ["container-crud", "document-crud"]

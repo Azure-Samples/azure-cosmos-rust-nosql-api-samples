@@ -21,11 +21,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = CosmosClient::new(&endpoint, credential, None)?;
 
     // Set database (the database must exist - create database not supported in RBAC)
-    let database = "my-database";
+    let database = env::var("COSMOSDB_DATABASE").map_err(|_| "COSMOSDB_DATABASE not set")?;
 
     // Create a container
-    let container = "my-container";
-    let partition_key = "/id".to_string();
+    let container = env::var("COSMOSDB_CONTAINER").map_err(|_| "COSMOSDB_CONTAINER not set")?;
+    let partition_key = "/pk".to_string();
     let container_id = container;
     let properties = ContainerProperties {
         id: container_id.into(),
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
     client
-        .database_client(database)
+        .database_client(&database)
         .create_container(properties, None)
         .await?
         .into_body()

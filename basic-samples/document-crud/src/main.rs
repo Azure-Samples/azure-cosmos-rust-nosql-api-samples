@@ -62,13 +62,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // read item
     let read_response = container_client
-        .read_item::<serde_json::Value>("my-item-partition-key-value", "my-item-id-value-1", None)
+        .read_item("my-item-partition-key-value", "my-item-id-value-1", None)
         .await;
     match read_response {
         Err(e) if e.http_status() == Some(StatusCode::NotFound) => println!("Item not found!"),
         Ok(r) => {
-            let body_bytes = r.into_body().collect().await?;
-            let item: serde_json::Value = serde_json::from_slice(&body_bytes)?;
+            let item: serde_json::Value = r.into_json_body().await?;
             println!("Found item:");
             println!("{:#?}", item);
         }
@@ -86,14 +85,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         container_client.query_items::<serde_json::Value>(&query.to_string(), pk, None)?;
 
     while let Some(page) = items.next().await {
-        let page = page?.into_body().collect().await?;
+        let page = page?.into_body().await?;
         println!("Query results page");
         println!("  Items:");
-        let page_json: serde_json::Value = serde_json::from_slice(&page)?;
-        if let Some(items) = page_json["Documents"].as_array() {
-            for item in items {
-                println!("    * {:#?}", item);
-            }
+        for item in page.items {
+            println!("    * {:#?}", item);
         }
     }
 

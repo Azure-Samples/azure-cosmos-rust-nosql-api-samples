@@ -1,5 +1,5 @@
 use azure_data_cosmos::{
-    models::{ContainerProperties, IndexingMode, IndexingPolicy, PartitionKeyDefinition, PropertyPath},
+    models::{ContainerProperties, IndexingMode, IndexingPolicy, PartitionKeyDefinition},
     CosmosClient,
 };
 use azure_identity::DefaultAzureCredential;
@@ -33,12 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         indexing_policy: Some(IndexingPolicy {
             automatic: true,
             indexing_mode: Some(IndexingMode::Consistent),
-            included_paths: vec![PropertyPath {
-                path: "/".to_string(),
-            }],
-            excluded_paths: vec![PropertyPath {
-                path: "/objects/*".to_string(),
-            }],
+            included_paths: vec!["/".into()],
+            excluded_paths: vec!["/objects/*".into()],
             composite_indexes: vec![],
             spatial_indexes: vec![],
             vector_indexes: vec![],
@@ -49,7 +45,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .database_client(&database)
         .create_container(properties, None)
         .await?
-        .into_body();
+        .into_body()
+        .await?;
 
     print!("Container created");
 

@@ -62,6 +62,7 @@ For more details on the `azure_identity` crate, refer to the documentation [here
 To run a sample, use Cargo:
 
 ```bash
+cd basic-samples/document-crud 
 cargo run
 ```
 
@@ -69,9 +70,8 @@ This will build and run the selected sample.
 
 ## Key concepts
 
-These samples include basic and more advanced samples:
+These samples include:
 * `basic-samples` - container and document crud
-* `advanced-samples` - an example Rust `CLI` application that wraps Cosmos DB operations
 
 ## Contributing
 

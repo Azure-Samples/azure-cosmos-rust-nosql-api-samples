@@ -16,20 +16,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => println!("Couldn't read COSMOSDB_ENDPOINT ({})", e),
     }
 
-    let endpoint = env::var("COSMOSDB_ENDPOINT").unwrap();
-    let credential = DefaultAzureCredential::new().unwrap();
+    let endpoint = env::var("COSMOSDB_ENDPOINT")?;
+    let credential = DefaultAzureCredential::new()?;
 
     // Create a Cosmos client
-    let client = CosmosClient::new(endpoint, credential, None)?;
+    let client = CosmosClient::new(&endpoint, credential, None)?;
 
     // Set database (database must already exist, create database not support in RBAC)
-    let database = "database-name";
+    let database = env::var("COSMOSDB_DATABASE").map_err(|_| "COSMOSDB_DATABASE not set")?;
 
     // Set container (ensure this container already exists with partition key of "/pk")
-    let container = "container-name";
+    let container = env::var("COSMOSDB_CONTAINER").map_err(|_| "COSMOSDB_CONTAINER not set")?;
 
-    let db_client = client.database_client(database);
-    let container_client = db_client.container_client(container);
+    let db_client = client.database_client(&database);
+    let container_client = db_client.container_client(&container);
 
     let items = vec![
         json!({
@@ -50,9 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .create_item("my-item-partition-key-value", item, None)
             .await
         {
-            Ok(create_response) => {
-                let created_item = create_response.deserialize_body().await?;
-                println!("Created item: {:#?}", created_item);
+            Ok(_) => {
+                println!("Created item");
             }
             Err(e) if e.http_status() == Some(StatusCode::Conflict) => {
                 return Err(format!("Document with ID '{}' already exists.", item_id).into());
@@ -68,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match read_response {
         Err(e) if e.http_status() == Some(StatusCode::NotFound) => println!("Item not found!"),
         Ok(r) => {
-            let item: serde_json::Value = r.deserialize_body().await?.unwrap();
+            let item: serde_json::Value = r.into_json_body().await?;
             println!("Found item:");
             println!("{:#?}", item);
         }
@@ -86,7 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         container_client.query_items::<serde_json::Value>(&query.to_string(), pk, None)?;
 
     while let Some(page) = items.next().await {
-        let page = page?.deserialize_body().await?;
+        let page = page?.into_body().await?;
         println!("Query results page");
         println!("  Items:");
         for item in page.items {
@@ -100,14 +99,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "pk": "my-item-partition-key-value",
         "name": "my-item-name-updated",
     });
-    let upsert_response = container_client
+    container_client
         .upsert_item("my-item-partition-key-value", upsert_item, None)
-        .await?
-        .deserialize_body()
-        .await?
-        .unwrap();
-    println!("Upsert item:");
-    println!("{:#?}", upsert_response);
+        .await?;
+    println!("Upserted item.");
 
     // replace item
 
@@ -116,19 +111,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "pk": "my-item-partition-key-value",
         "name": "my-item-name-replaced",
     });
-    let replace_response = container_client
+    container_client
         .replace_item(
             "my-item-partition-key-value",
             "my-item-id-value-2",
             replace_item,
             None,
         )
-        .await?
-        .deserialize_body()
-        .await?
-        .unwrap();
-    println!("Replace item:");
-    println!("{:#?}", replace_response);
+        .await?;
+    println!("Replaced item.");
 
     // delete items
     let item_ids = vec!["my-item-id-value-1", "my-item-id-value-2"];

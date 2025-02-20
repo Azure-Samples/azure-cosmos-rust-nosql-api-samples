@@ -1,2 +1,3 @@
 [workspace]
+resolver = "2"
 members = ["container-crud", "document-crud"]
